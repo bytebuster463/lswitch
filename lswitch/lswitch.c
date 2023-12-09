@@ -57,43 +57,24 @@ LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {
 					DWORD threadId = GetWindowThreadProcessId(hWnd, NULL);
 					HKL layout_current = GetKeyboardLayout(threadId);
 					DMESG("Debug 1", "current=%.8x last=%.8x", layout_current, g_layout_last);
-// #ifdef DEBUG
-// 					sprintf(&dmesg, "current=%.8x last=%.8x", layout_current, g_layout_last);
-// 					MessageBox(NULL,dmesg,_T("Debug 1"),MB_OK|MB_ICONINFORMATION);
-// #endif
-					if(NULL != layout_current) {
-						// ENG->OTH
+					if(layout_current) {
 						if (LOWORD(layout_current) == LOWORD(g_layout_eng)) {
+							// ENG->OTH
 							DMESG("Debug 2", "ENG->OTH", 0);
-// #ifdef DEBUG
-// 							MessageBox(NULL,_T("ENG->OTH"),_T("Debug 2"),MB_OK|MB_ICONINFORMATION);
-// #endif
-							// ENG->UNK ==> simply change to next
 							if (g_layout_last == HKL_UNKNOWN) {
+								// ENG->UNK ==> simply change to next
 								DMESG("Debug 3", "ENG->OTH, last %.8x=UNK, ENG->NEXT", g_layout_last);
-// #ifdef DEBUG
-// 								sprintf(&dmesg, ("ENG->OTH, last %.8x=UNK, ENG->NEXT"), g_layout_last);
-// 								MessageBox(NULL,dmesg,_T("Debug 3"),MB_OK|MB_ICONINFORMATION);
-// #endif
 								PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)HKL_NEXT);
-							// ENG->KNOWN ==> load known
 							} else {
+								// ENG->KNOWN ==> load known
 								// compute string locale name for last layout
 								// IMPORTAMT! LOWORD is crucial to trim off the (high) control part
 								TCHAR s_layout_last[KL_NAMELENGTH];
 								wsprintf(s_layout_last, _T("%.8x"), LOWORD(g_layout_last));
 								DMESG("Debug 4", "ENG->OTH, last %.8x=%s, ENG->LAST", g_layout_last, s_layout_last);
-// #ifdef DEBUG
-// 								sprintf(&dmesg, ("ENG->OTH, last %.8x=%s, ENG->LAST"), g_layout_last, s_layout_last);
-// 								MessageBox(NULL,dmesg,_T("Debug 4"),MB_OK|MB_ICONINFORMATION);
-// #endif
 								HKL layout_new = LoadKeyboardLayout(/* LAYOUT_UKR */s_layout_last, (UINT)KLF_ACTIVATE|KLF_SUBSTITUTE_OK);
 								if(layout_new) {
 									DMESG("Debug 5", "loaded %s, got %.8x", s_layout_last, layout_new);
-// #ifdef DEBUG
-// 									sprintf(&dmesg, "loaded %s, got %.8x", s_layout_last, layout_new);
-// 									MessageBox(NULL,dmesg,_T("Debug 5"),MB_OK|MB_ICONINFORMATION);
-// #endif
 									PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)layout_new);
 									// need to unload?
 									// UnloadKeyboardLayout(layout_new);
@@ -105,19 +86,12 @@ LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {
 						} else {
 							// OTH->ENG
 							DMESG("Debug 14", "OTH->ENG", 0);
-// #ifdef DEBUG
-// 							MessageBox(NULL,_T("OTH->ENG"),_T("Debug 14"),MB_OK|MB_ICONINFORMATION);
-// #endif
 							// compute string locale name for English
 							TCHAR s_layout_eng[KL_NAMELENGTH];
 							wsprintf(s_layout_eng, _T("%.8x"), LOWORD(g_layout_eng));
 							HKL layout_new = LoadKeyboardLayout(s_layout_eng, (UINT)KLF_ACTIVATE|KLF_SUBSTITUTE_OK);
 							if(layout_new) {
 								DMESG("Debug 15", "loaded %s, got %.8x", LAYOUT_ENG, layout_new);
-// #ifdef DEBUG
-// 								sprintf(&dmesg, "loaded %s, got %.8x", LAYOUT_ENG, layout_new);
-// 								MessageBox(NULL,dmesg,_T("Debug 15"),MB_OK|MB_ICONINFORMATION);
-// #endif
 								PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)layout_new);
 								// need to unload?
 								// UnloadKeyboardLayout(layout_new);
@@ -287,20 +261,12 @@ int xMain() {
 		if ((token = _tcstok_s(NULL, _T(" "), &ptr)) != NULL) {
 			arg_key = _tstoi(token);
 			DMESG("Debug 21", "token = %s = %d", token, arg_key);
-// #ifdef DEBUG
-// 			sprintf(&dmesg, "token = %s = %d", token, arg_key);
-// 			MessageBox(NULL,dmesg,_T("Debug 21"),MB_OK|MB_ICONINFORMATION);
-// #endif
 			if(arg_key) g_key = arg_key;
 		}
 		// parse ENG code (long/hex)
 		if ((token = _tcstok_s(NULL, _T(" "), &ptr)) != NULL) {
 			arg_locale = _tcstol(token, NULL, 0);
 			DMESG("Debug 22", "token = %s = %d", token, arg_locale);
-// #ifdef DEBUG
-// 			sprintf(&dmesg, "token = %s = %d", token, arg_locale);
-// 			MessageBox(NULL,dmesg,_T("Debug 22"),MB_OK|MB_ICONINFORMATION);
-// #endif
 			if(arg_locale) g_layout_eng = (HKL)arg_locale;
 		}
 
@@ -308,10 +274,6 @@ int xMain() {
 		if ((token = _tcstok_s(NULL, _T(" "), &ptr)) != NULL) {
 			arg_blocker = _tcstol(token, NULL, 0);
 			DMESG("Debug 23", "token = %s = %d", token, arg_blocker);
-// #ifdef DEBUG
-// 			sprintf(&dmesg, "token = %s = %d", token, arg_blocker);
-// 			MessageBox(NULL,dmesg,_T("Debug 23"),MB_OK|MB_ICONINFORMATION);
-// #endif
 			if(arg_blocker) g_key_blocker = arg_blocker;
 		}
 

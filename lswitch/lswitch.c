@@ -4,7 +4,7 @@
 
 #include <windows.h>
 #include <tchar.h>
-// #include <stdio.h>
+#include <stdio.h>
 // #include <wchar.h>
 
 TCHAR	g_prog_dir[MAX_PATH*2];
@@ -27,9 +27,13 @@ HKL g_layout_last = HKL_UNKNOWN;	// last non-ENG layout
 #ifdef DEBUG
 	// _TCHAR *dmesg[200];
 	TCHAR dmesg[200];
-	#define DMESG(TITLE, ...) \
-		sprintf(&dmesg, __VA_ARGS__); \
-		MessageBox(NULL,dmesg,_T(TITLE),MB_OK|MB_ICONINFORMATION);
+	// #define DMESG(TITLE, FORMAT) { \
+	// 	MessageBox(NULL,_T(FORMAT),_T(TITLE),MB_OK|MB_ICONINFORMATION); \
+	// }
+	#define DMESG(TITLE, FORMAT, ...) { \
+		_stprintf_s(dmesg, sizeof(dmesg), _T(FORMAT), __VA_ARGS__); \
+		MessageBox(NULL,dmesg,_T(TITLE),MB_OK|MB_ICONINFORMATION); \
+	}
 #else
 	#define debug00(format, ...) { }
 #endif
@@ -57,7 +61,7 @@ LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {
 					if(NULL != layout_current) {
 						// ENG->OTH
 						if (LOWORD(layout_current) == LOWORD(g_layout_eng)) {
-							DMESG("Debug 2", "ENG->OTH");
+							DMESG("Debug 2", "ENG->OTH", 0);
 // #ifdef DEBUG
 // 							MessageBox(NULL,_T("ENG->OTH"),_T("Debug 2"),MB_OK|MB_ICONINFORMATION);
 // #endif
@@ -97,7 +101,7 @@ LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {
 							}
 						} else {
 							// OTH->ENG
-							DMESG("Debug 14", "OTH->ENG");
+							DMESG("Debug 14", "OTH->ENG", 0);
 // #ifdef DEBUG
 // 							MessageBox(NULL,_T("OTH->ENG"),_T("Debug 14"),MB_OK|MB_ICONINFORMATION);
 // #endif
@@ -288,7 +292,7 @@ int xMain() {
 		}
 		// parse ENG code (long/hex)
 		if ((token = _tcstok_s(NULL, _T(" "), &ptr)) != NULL) {
-			arg_locale = _tcstol(token, NULL, 16);
+			arg_locale = _tcstol(token, NULL, 0);
 			DMESG("Debug 22", "token = %s = %d", token, arg_locale);
 // #ifdef DEBUG
 // 			sprintf(&dmesg, "token = %s = %d", token, arg_locale);
@@ -299,7 +303,7 @@ int xMain() {
 
 		// parse blocker code (long/hex)
 		if ((token = _tcstok_s(NULL, _T(" "), &ptr)) != NULL) {
-			arg_blocker = _tcstol(token, NULL, 16);
+			arg_blocker = _tcstol(token, NULL, 0);
 			DMESG("Debug 23", "token = %s = %d", token, arg_blocker);
 // #ifdef DEBUG
 // 			sprintf(&dmesg, "token = %s = %d", token, arg_blocker);

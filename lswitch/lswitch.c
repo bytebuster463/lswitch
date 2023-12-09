@@ -1,5 +1,8 @@
 #define _WIN32_WINNT 0x500
-#define DEBUG
+
+#ifdef _DEBUG
+	#define DEBUG
+#endif
 // #define UNICODE
 
 #include <windows.h>
@@ -35,7 +38,7 @@ HKL g_layout_last = HKL_UNKNOWN;	// last non-ENG layout
 		MessageBox(NULL,dmesg,_T(TITLE),MB_OK|MB_ICONINFORMATION); \
 	}
 #else
-	#define debug00(format, ...) { }
+	#define DMESG(TITLE, FORMAT, ...) { }
 #endif
 
 LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {

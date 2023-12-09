@@ -103,6 +103,7 @@
       <SubSystem>Windows</SubSystem>
       <EntryPointSymbol>xMain</EntryPointSymbol>
       <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalDependencies>kernel32.lib;user32.lib;msvcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -130,6 +131,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <EntryPointSymbol>xMain</EntryPointSymbol>
       <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalDependencies>kernel32.lib;user32.lib;msvcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <CLRThreadAttribute>DefaultThreadingAttribute</CLRThreadAttribute>
     </Link>
   </ItemDefinitionGroup>

@@ -1,7 +1,11 @@
 #define _WIN32_WINNT 0x500
+#define DEBUG
+// #define UNICODE
 
 #include <windows.h>
 #include <tchar.h>
+// #include <stdio.h>
+// #include <wchar.h>
 
 TCHAR	g_prog_dir[MAX_PATH*2];
 DWORD	g_prog_dir_len;
@@ -20,10 +24,14 @@ HKL g_layout_last = HKL_UNKNOWN;	// last non-ENG layout
 
 // TCHAR g_layout_last[KL_NAMELENGTH] = _T("00000000"); //LAYOUT_UNKNOWN; //= "00000000";
 
-// #define DEBUG
-
 #ifdef DEBUG
-TCHAR dmesg[200];
+	// _TCHAR *dmesg[200];
+	TCHAR dmesg[200];
+	#define DMESG(TITLE, ...) \
+		sprintf(&dmesg, __VA_ARGS__); \
+		MessageBox(NULL,dmesg,_T(TITLE),MB_OK|MB_ICONINFORMATION);
+#else
+	#define debug00(format, ...) { }
 #endif
 
 LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {
@@ -41,22 +49,25 @@ LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {
 				if (hWnd) {
 					DWORD threadId = GetWindowThreadProcessId(hWnd, NULL);
 					HKL layout_current = GetKeyboardLayout(threadId);
-#ifdef DEBUG
-					sprintf(&dmesg, "current=%.8x last=%.8x", layout_current, g_layout_last);
-					MessageBox(NULL,dmesg,_T("Debug 1"),MB_OK|MB_ICONINFORMATION);
-#endif
+					DMESG("Debug 1", "current=%.8x last=%.8x", layout_current, g_layout_last);
+// #ifdef DEBUG
+// 					sprintf(&dmesg, "current=%.8x last=%.8x", layout_current, g_layout_last);
+// 					MessageBox(NULL,dmesg,_T("Debug 1"),MB_OK|MB_ICONINFORMATION);
+// #endif
 					if(NULL != layout_current) {
 						// ENG->OTH
 						if (LOWORD(layout_current) == LOWORD(g_layout_eng)) {
-#ifdef DEBUG
-							MessageBox(NULL,"ENG->OTH",_T("Debug 2"),MB_OK|MB_ICONINFORMATION);
-#endif
+							DMESG("Debug 2", "ENG->OTH");
+// #ifdef DEBUG
+// 							MessageBox(NULL,_T("ENG->OTH"),_T("Debug 2"),MB_OK|MB_ICONINFORMATION);
+// #endif
 							// ENG->UNK ==> simply change to next
 							if (g_layout_last == HKL_UNKNOWN) {
-#ifdef DEBUG
-								sprintf(&dmesg, "ENG->OTH, last %.8x=UNK, ENG->NEXT", g_layout_last);
-								MessageBox(NULL,dmesg,_T("Debug 3"),MB_OK|MB_ICONINFORMATION);
-#endif
+								DMESG("Debug 3", "ENG->OTH, last %.8x=UNK, ENG->NEXT", g_layout_last);
+// #ifdef DEBUG
+// 								sprintf(&dmesg, ("ENG->OTH, last %.8x=UNK, ENG->NEXT"), g_layout_last);
+// 								MessageBox(NULL,dmesg,_T("Debug 3"),MB_OK|MB_ICONINFORMATION);
+// #endif
 								PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)HKL_NEXT);
 							// ENG->KNOWN ==> load known
 							} else {
@@ -64,17 +75,21 @@ LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {
 								// IMPORTAMT! LOWORD is crucial to trim off the (high) control part
 								TCHAR s_layout_last[KL_NAMELENGTH];
 								wsprintf(s_layout_last, _T("%.8x"), LOWORD(g_layout_last));
-#ifdef DEBUG
-								sprintf(&dmesg, "ENG->OTH, last %.8x=%s, ENG->LAST", g_layout_last, s_layout_last);
-								MessageBox(NULL,dmesg,_T("Debug 4"),MB_OK|MB_ICONINFORMATION);
-#endif
+								DMESG("Debug 4", "ENG->OTH, last %.8x=%s, ENG->LAST", g_layout_last, s_layout_last);
+// #ifdef DEBUG
+// 								sprintf(&dmesg, ("ENG->OTH, last %.8x=%s, ENG->LAST"), g_layout_last, s_layout_last);
+// 								MessageBox(NULL,dmesg,_T("Debug 4"),MB_OK|MB_ICONINFORMATION);
+// #endif
 								HKL layout_new = LoadKeyboardLayout(/* LAYOUT_UKR */s_layout_last, (UINT)KLF_ACTIVATE|KLF_SUBSTITUTE_OK);
-								if(NULL != layout_new) {
-#ifdef DEBUG
-									sprintf(&dmesg, "loaded %s, got %.8x", s_layout_last, layout_new);
-									MessageBox(NULL,dmesg,_T("Debug 5"),MB_OK|MB_ICONINFORMATION);
-#endif
+								if(layout_new) {
+									DMESG("Debug 5", "loaded %s, got %.8x", s_layout_last, layout_new);
+// #ifdef DEBUG
+// 									sprintf(&dmesg, "loaded %s, got %.8x", s_layout_last, layout_new);
+// 									MessageBox(NULL,dmesg,_T("Debug 5"),MB_OK|MB_ICONINFORMATION);
+// #endif
 									PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)layout_new);
+									// need to unload?
+									// UnloadKeyboardLayout(layout_new);
 									// HKL layout_new2 = ActivateKeyboardLayout(layout_new, (UINT)KLF_REORDER);
 									// sprintf(&dmesg, "activated %.8x", layout_new2);
 									// MessageBox(NULL,dmesg,_T("Debug 6"),MB_OK|MB_ICONINFORMATION);
@@ -82,19 +97,23 @@ LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {
 							}
 						} else {
 							// OTH->ENG
-#ifdef DEBUG
-							MessageBox(NULL,"OTH->ENG",_T("Debug 14"),MB_OK|MB_ICONINFORMATION);
-#endif
+							DMESG("Debug 14", "OTH->ENG");
+// #ifdef DEBUG
+// 							MessageBox(NULL,_T("OTH->ENG"),_T("Debug 14"),MB_OK|MB_ICONINFORMATION);
+// #endif
 							// compute string locale name for English
 							TCHAR s_layout_eng[KL_NAMELENGTH];
 							wsprintf(s_layout_eng, _T("%.8x"), LOWORD(g_layout_eng));
 							HKL layout_new = LoadKeyboardLayout(s_layout_eng, (UINT)KLF_ACTIVATE|KLF_SUBSTITUTE_OK);
-							if(NULL != layout_new) {
-#ifdef DEBUG
-								sprintf(&dmesg, "loaded %s, got %.8x", LAYOUT_ENG, layout_new);
-								MessageBox(NULL,dmesg,_T("Debug 15"),MB_OK|MB_ICONINFORMATION);
-#endif
+							if(layout_new) {
+								DMESG("Debug 15", "loaded %s, got %.8x", LAYOUT_ENG, layout_new);
+// #ifdef DEBUG
+// 								sprintf(&dmesg, "loaded %s, got %.8x", LAYOUT_ENG, layout_new);
+// 								MessageBox(NULL,dmesg,_T("Debug 15"),MB_OK|MB_ICONINFORMATION);
+// #endif
 								PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)layout_new);
+								// need to unload?
+								// UnloadKeyboardLayout(layout_new);
 								// HKL layout_new2 = ActivateKeyboardLayout(layout_new, (UINT)0);
 								// sprintf(&dmesg, "activated %.8x", layout_new2);
 								// MessageBox(NULL,dmesg,_T("Debug 16"),MB_OK|MB_ICONINFORMATION);
@@ -149,7 +168,96 @@ void CALLBACK TimerCb(HWND hWnd,UINT uMsg,UINT_PTR idEvent,DWORD dwTime) {
 		PostQuitMessage(0);
 }
 
+void usage() {
+	OutputDebugString(_T("Usage\n"));
+}
+
+/*
+int newMain(int argc, _TCHAR* argv[]) {
+	MSG	  msg;
+	DWORD	  sz;
+	BOOL	  fQuit=FALSE;
+
+	OutputDebugString(_T("Init\n"));
+	wprintf(_T("Init\n"));
+	wsprintf(&dmesg, _T("argc= %d"), argc);
+	MessageBox(NULL,dmesg,_T("ARGV"),MB_OK|MB_ICONINFORMATION);		
+	for(int i=0; i<argc; i++) {
+		MessageBox(NULL,argv[i],_T("ARGV"),MB_OK|MB_ICONINFORMATION);		
+		if(_tcscmp(argv[i], _T("q"))) {
+			// Quit
+			fQuit=TRUE;
+		} else if (_tcscmp(argv[i], _T("?"))) {
+			usage();
+			ExitProcess(0);
+		} else if (_tcscmp(argv[i], _T("h"))) {
+			usage();
+			ExitProcess(0);
+		} else if (_tcscmp(argv[i], _T("-h"))) {
+			usage();
+			ExitProcess(0);
+		} else if (_tcscmp(argv[i], _T("k"))) {
+			// Operation Key
+			if(argc=i++) break;
+			UINT key = _tstoi(argv[i]);
+			if(key) g_key = key;
+		} else if (_tcscmp(argv[i], _T("b"))) {
+			// Base locale (HEX)
+			if(argc=i++) break;
+			ULONG base_locale = _tcstoul(argv[i], NULL, 16);
+			if(base_locale) g_layout_eng = (HKL)base_locale;
+		} else if (_tcscmp(argv[i], _T("m"))) {
+			// Mute key (HEX)
+			if(argc=i++) break;
+			ULONG mute_key = _tcstoul(argv[i], NULL, 16);
+			if(mute_key) g_key_blocker = mute_key;
+		}
+	}
+
+	g_hEvent=CreateEvent(NULL,TRUE,FALSE,_T("HaaliLSwitch"));
+	if (g_hEvent==NULL)
+		failed(_T("CreateEvent()"));
+	if (GetLastError()==ERROR_ALREADY_EXISTS) {
+		if (fQuit) {
+			SetEvent(g_hEvent);
+			goto quit;
+		}
+		failedx(_T("LSwitch is already running!"));
+	}
+
+	if (fQuit)
+		failedx(_T("LSwitch is not running!"));
+
+	sz=GetModuleFileName(NULL,g_prog_dir,MAX_PATH);
+	if (sz==0)
+		failed(_T("GetModuleFileName()"));
+	if (sz==MAX_PATH)
+		failedx(_T("Module file name is too long."));
+	while (sz>0 && g_prog_dir[sz-1]!=_T('\\'))
+		--sz;
+	g_prog_dir_len=sz;
+
+	if (SetTimer(NULL,0,500,TimerCb)==0)
+		failed(_T("SetTimer()"));
+
+	g_khook=SetWindowsHookEx(WH_KEYBOARD_LL,KbdHook,GetModuleHandle(0),0);
+	if (g_khook==0)
+		failed(_T("SetWindowsHookEx()"));
+
+	while (GetMessage(&msg,0,0,0)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	UnhookWindowsHookEx(g_khook);
+quit:
+	CloseHandle(g_hEvent);
+
+	ExitProcess(0);
+}
+*/
 int xMain() {
+
 	MSG	  msg;
 	DWORD	  sz;
 	BOOL	  fQuit=FALSE;
@@ -167,33 +275,36 @@ int xMain() {
     // the next token is required
     TCHAR 	*ptr;		
 		// Skip the program name (first token)
-		TCHAR		*token = _tcstok_s(cmd, " ", &ptr);
+		TCHAR		*token = _tcstok_s(cmd, _T(" "), &ptr);
 		// parse hotkey (int)
-		if ((token = _tcstok_s(NULL, " ", &ptr)) != NULL) {
+		if ((token = _tcstok_s(NULL, _T(" "), &ptr)) != NULL) {
 			arg_key = _tstoi(token);
-#ifdef DEBUG
-			sprintf(&dmesg, "token = %s = %d", token, arg_key);
-			MessageBox(NULL,dmesg,_T("Debug 21"),MB_OK|MB_ICONINFORMATION);
-#endif
+			DMESG("Debug 21", "token = %s = %d", token, arg_key);
+// #ifdef DEBUG
+// 			sprintf(&dmesg, "token = %s = %d", token, arg_key);
+// 			MessageBox(NULL,dmesg,_T("Debug 21"),MB_OK|MB_ICONINFORMATION);
+// #endif
 			if(arg_key) g_key = arg_key;
 		}
 		// parse ENG code (long/hex)
-		if ((token = _tcstok_s(NULL, " ", &ptr)) != NULL) {
+		if ((token = _tcstok_s(NULL, _T(" "), &ptr)) != NULL) {
 			arg_locale = _tcstol(token, NULL, 16);
-#ifdef DEBUG
-			sprintf(&dmesg, "token = %s = %d", token, arg_locale);
-			MessageBox(NULL,dmesg,_T("Debug 22"),MB_OK|MB_ICONINFORMATION);
-#endif
+			DMESG("Debug 22", "token = %s = %d", token, arg_locale);
+// #ifdef DEBUG
+// 			sprintf(&dmesg, "token = %s = %d", token, arg_locale);
+// 			MessageBox(NULL,dmesg,_T("Debug 22"),MB_OK|MB_ICONINFORMATION);
+// #endif
 			if(arg_locale) g_layout_eng = (HKL)arg_locale;
 		}
 
 		// parse blocker code (long/hex)
-		if ((token = _tcstok_s(NULL, " ", &ptr)) != NULL) {
+		if ((token = _tcstok_s(NULL, _T(" "), &ptr)) != NULL) {
 			arg_blocker = _tcstol(token, NULL, 16);
-#ifdef DEBUG
-			sprintf(&dmesg, "token = %s = %d", token, arg_blocker);
-			MessageBox(NULL,dmesg,_T("Debug 22"),MB_OK|MB_ICONINFORMATION);
-#endif
+			DMESG("Debug 23", "token = %s = %d", token, arg_blocker);
+// #ifdef DEBUG
+// 			sprintf(&dmesg, "token = %s = %d", token, arg_blocker);
+// 			MessageBox(NULL,dmesg,_T("Debug 23"),MB_OK|MB_ICONINFORMATION);
+// #endif
 			if(arg_blocker) g_key_blocker = arg_blocker;
 		}
 
@@ -246,6 +357,7 @@ int xMain() {
 	UnhookWindowsHookEx(g_khook);
 quit:
 	CloseHandle(g_hEvent);
+
 
 	ExitProcess(0);
 }

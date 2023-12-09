@@ -42,79 +42,99 @@ HKL g_layout_last = HKL_UNKNOWN;	// last non-ENG layout
 #endif
 
 LRESULT CALLBACK KbdHook(int nCode,WPARAM wParam,LPARAM lParam) {
+	KBDLLHOOKSTRUCT   *ks;
+	HWND 							hWnd;
+	DWORD 						threadId;
+	HKL								layout_current;
+
 	if (nCode<0)
-		return CallNextHookEx(g_khook,nCode,wParam,lParam);
-	if (nCode==HC_ACTION) {
-		KBDLLHOOKSTRUCT   *ks=(KBDLLHOOKSTRUCT*)lParam;
-		if (ks->vkCode==g_key) {
-			// if blocker+g_Key pressed (e.g. Shift+CapsLock), do nothing
-			if(g_key_blocker && (GetAsyncKeyState(g_key_blocker) & 0x8000)) {
-				return 0;
-			}
-			if (wParam==WM_KEYDOWN) {
-				HWND hWnd = GetForegroundWindow();
-				if (hWnd) {
-					DWORD threadId = GetWindowThreadProcessId(hWnd, NULL);
-					HKL layout_current = GetKeyboardLayout(threadId);
-					DMESG("Debug 1", "current=%.8x last=%.8x", layout_current, g_layout_last);
-					if(layout_current) {
-						if (LOWORD(layout_current) == LOWORD(g_layout_eng)) {
-							// ENG->OTH
-							DMESG("Debug 2", "ENG->OTH", 0);
-							if (g_layout_last == HKL_UNKNOWN) {
-								// ENG->UNK ==> simply change to next
-								DMESG("Debug 3", "ENG->OTH, last %.8x=UNK, ENG->NEXT", g_layout_last);
-								PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)HKL_NEXT);
-							} else {
-								// ENG->KNOWN ==> load known
-								// compute string locale name for last layout
-								// IMPORTAMT! LOWORD is crucial to trim off the (high) control part
-								TCHAR s_layout_last[KL_NAMELENGTH];
-								wsprintf(s_layout_last, _T("%.8x"), LOWORD(g_layout_last));
-								DMESG("Debug 4", "ENG->OTH, last %.8x=%s, ENG->LAST", g_layout_last, s_layout_last);
-								HKL layout_new = LoadKeyboardLayout(/* LAYOUT_UKR */s_layout_last, (UINT)KLF_ACTIVATE|KLF_SUBSTITUTE_OK);
-								if(layout_new) {
-									DMESG("Debug 5", "loaded %s, got %.8x", s_layout_last, layout_new);
-									PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)layout_new);
-									// need to unload?
-									// UnloadKeyboardLayout(layout_new);
-									// HKL layout_new2 = ActivateKeyboardLayout(layout_new, (UINT)KLF_REORDER);
-									// sprintf(&dmesg, "activated %.8x", layout_new2);
-									// MessageBox(NULL,dmesg,_T("Debug 6"),MB_OK|MB_ICONINFORMATION);
-								}
-							}
-						} else {
-							// OTH->ENG
-							DMESG("Debug 14", "OTH->ENG", 0);
-							// compute string locale name for English
-							TCHAR s_layout_eng[KL_NAMELENGTH];
-							wsprintf(s_layout_eng, _T("%.8x"), LOWORD(g_layout_eng));
-							HKL layout_new = LoadKeyboardLayout(s_layout_eng, (UINT)KLF_ACTIVATE|KLF_SUBSTITUTE_OK);
-							if(layout_new) {
-								DMESG("Debug 15", "loaded %s, got %.8x", LAYOUT_ENG, layout_new);
-								PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)layout_new);
-								// need to unload?
-								// UnloadKeyboardLayout(layout_new);
-								// HKL layout_new2 = ActivateKeyboardLayout(layout_new, (UINT)0);
-								// sprintf(&dmesg, "activated %.8x", layout_new2);
-								// MessageBox(NULL,dmesg,_T("Debug 16"),MB_OK|MB_ICONINFORMATION);
+		goto nothingtodo;
+		// return CallNextHookEx(g_khook,nCode,wParam,lParam);
+	if (nCode!=HC_ACTION)
+		goto nothingtodo;
+	
+	ks=(KBDLLHOOKSTRUCT*)lParam;
+	if (ks->vkCode!=g_key)
+		goto nothingtodo;
 
-								// and save						
-								g_layout_last = layout_current;
-								// _tcscpy_s(g_layout_last, sizeof(g_layout_last), lay_cur_str);
-								// sprintf(&g_layout_last, L"%.8x", layout_last);
-							}
-						}
-						// GetKeyboardLayout(0);
-						// ActivateKeyboardLayout( (HKL)HKL_NEXT, (UINT)KLF_REORDER|KLF_SUBSTITUTE_OK/* win8+ unused |KLF_SETFORPROCESS*/);
-//					PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)HKL_PREV);
-					}
-				}
+	// if blocker+g_Key pressed (e.g. Shift+CapsLock), do nothing
+	if(g_key_blocker && (GetAsyncKeyState(g_key_blocker) & 0x8000))
+		goto nothingtodo;
+	
+	// consider WM_KEYUP processed, too
+	if (wParam!=WM_KEYDOWN)
+		goto processed;
+
+	// choke if no foreground window
+	hWnd = GetForegroundWindow();
+	if (!hWnd)
+		goto processed;
+
+	// choke if no foreground window's thread
+	threadId = GetWindowThreadProcessId(hWnd, NULL);
+	if (!threadId)
+		goto processed;
+
+	// choke if no foreground window's thread's keyboard layout
+	layout_current = GetKeyboardLayout(threadId);
+	DMESG("Debug 1", "current=%.8x last=%.8x", layout_current, g_layout_last);
+	if(!layout_current)
+		goto processed;
+
+	if (LOWORD(layout_current) == LOWORD(g_layout_eng)) {
+		// ENG->OTH
+		DMESG("Debug 2", "ENG->OTH", 0);
+		if (g_layout_last == HKL_UNKNOWN) {
+			// ENG->UNK ==> simply change to next
+			DMESG("Debug 3", "ENG->OTH, last %.8x=UNK, ENG->NEXT", g_layout_last);
+			PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)HKL_NEXT);
+		} else {
+			// ENG->KNOWN ==> load known
+			// compute string locale name for last layout
+			// IMPORTAMT! LOWORD is crucial to trim off the (high) control part
+			TCHAR s_layout_last[KL_NAMELENGTH];
+			wsprintf(s_layout_last, _T("%.8x"), LOWORD(g_layout_last));
+			DMESG("Debug 4", "ENG->OTH, last %.8x=%s, ENG->LAST", g_layout_last, s_layout_last);
+			HKL layout_new = LoadKeyboardLayout(/* LAYOUT_UKR */s_layout_last, (UINT)KLF_ACTIVATE|KLF_SUBSTITUTE_OK);
+			if(layout_new) {
+				DMESG("Debug 5", "loaded %s, got %.8x", s_layout_last, layout_new);
+				PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)layout_new);
+				// need to unload?
+				// UnloadKeyboardLayout(layout_new);
+				// HKL layout_new2 = ActivateKeyboardLayout(layout_new, (UINT)KLF_REORDER);
+				// sprintf(&dmesg, "activated %.8x", layout_new2);
+				// MessageBox(NULL,dmesg,_T("Debug 6"),MB_OK|MB_ICONINFORMATION);
 			}
-			return 1;
 		}
-	}
+	} else {
+		// OTH->ENG
+		DMESG("Debug 14", "OTH->ENG", 0);
+		// compute string locale name for English
+		TCHAR s_layout_eng[KL_NAMELENGTH];
+		wsprintf(s_layout_eng, _T("%.8x"), LOWORD(g_layout_eng));
+		HKL layout_new = LoadKeyboardLayout(s_layout_eng, (UINT)KLF_ACTIVATE|KLF_SUBSTITUTE_OK);
+		if(layout_new) {
+			DMESG("Debug 15", "loaded %s, got %.8x", LAYOUT_ENG, layout_new);
+			PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)layout_new);
+			// need to unload?
+			// UnloadKeyboardLayout(layout_new);
+			// HKL layout_new2 = ActivateKeyboardLayout(layout_new, (UINT)0);
+			// sprintf(&dmesg, "activated %.8x", layout_new2);
+			// MessageBox(NULL,dmesg,_T("Debug 16"),MB_OK|MB_ICONINFORMATION);
 
+			// and save						
+			g_layout_last = layout_current;
+			// _tcscpy_s(g_layout_last, sizeof(g_layout_last), lay_cur_str);
+			// sprintf(&g_layout_last, L"%.8x", layout_last);
+		}
+		// GetKeyboardLayout(0);
+		// ActivateKeyboardLayout( (HKL)HKL_NEXT, (UINT)KLF_REORDER|KLF_SUBSTITUTE_OK/* win8+ unused |KLF_SETFORPROCESS*/);
+//					PostMessage(hWnd,WM_INPUTLANGCHANGEREQUEST,0, (LPARAM)HKL_PREV);
+	}
+processed:
+	return 1;
+
+nothingtodo:
 	return CallNextHookEx(g_khook,nCode,wParam,lParam);
 }
 
